@@ -18,6 +18,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
+import org.mockito.MockedConstruction;
+import java.io.BufferedReader;
+
 public class AppTest {
 
     private static Path testFile = Paths.get("ejemplo.txt");
@@ -26,7 +31,7 @@ public class AppTest {
     public static void setup() throws IOException {
         Files.writeString(testFile, "kjdbvws wonvwofjw\n sdnfwijf ooj    kjndfohwouer 21374 vehf\n jgfosj\n\nskfjwoief ewjf\n\n\ndkfgwoihgpw vs wepfjwfin");
     }
-
+    
     @AfterAll
     public static void teardown() {
         try {
@@ -51,8 +56,66 @@ public class AppTest {
         
         assertEquals("Usage: wc [-clw file]\n".trim(), output.toString().trim());
     }
-
     
+    @Test
+    public void testUsageMessageWhenThreeArgs() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	App.main(new String[] {"-c","ejemplo_1.txt","ejemplo_2.txt"});
+    	
+    	assertEquals("Wrong arguments!\n".trim(), output.toString().trim());
+    }
+    
+    @Test
+    public void testFileNotFound() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	App.main(new String[] {"-c","fake-file.txt"});
+    	
+    	assertEquals("Cannot find file: fake-file.txt\n".trim(), output.toString().trim());
+    }
 
+    @Test
+    public void testCommandNoDash() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	App.main(new String[] {"c","ejemplo.txt"});
+    	
+    	assertEquals("The commands do not start with -\n".trim(), output.toString().trim());
+    }
 
+    @Test
+    public void testUnrecognizedCommand() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	App.main(new String[] {"-y","ejemplo.txt"});
+    	
+    	assertEquals("Unrecognized command: y\n".trim(), output.toString().trim());
+    }
+    
+    @Test
+    public void testCorrectPath() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	App.main(new String[] {"-clw","ejemplo.txt"});
+    	
+    	assertEquals("109\t7\t20\tejemplo.txt\n".trim(), output.toString().trim());
+    }
+    
+    @Test
+    public void testUsageMessageWhenReadError() {
+    	ByteArrayOutputStream output = new ByteArrayOutputStream();
+    	System.setOut(new PrintStream(output));
+    	String file = "ejemplo.txt";
+    	
+    	try(MockedConstruction<BufferedReader> mocked = mockConstruction(BufferedReader.class,
+    			(mock, context) ->{
+    				when(mock.read()).thenThrow(new IOException("Read Error Test"));
+    			})){
+    		App.main(new String[] {"-c", file});
+    	}
+    	
+    	assertEquals("Error reading file: " + file + "\n".trim(), output.toString().trim());
+    }
+    
 }
